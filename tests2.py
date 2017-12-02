@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+import torch
 
 def cos_loop_spatial(matrix, vector):
     """
@@ -36,12 +37,20 @@ def cos_matrix_multiplication(matrix, vector):
 cos_functions = [cos_loop_spatial, cos_loop, cos_matrix_multiplication]
 
 # Test performance and plot the best results of each function
-mat = np.random.randn(1000,1000)
-vec = np.random.randn(1000)
-cos_performance = {}
-for func in cos_functions:
-    func_performance = %timeit -o func(mat, vec)
-    cos_performance[func.__name__] = func_performance.best
+# mat = np.random.randn(1000,1000)
+# vec = np.random.randn(1000)
+# cos_performance = {}
+# for func in cos_functions:
+#     func_performance = %timeit -o func(mat, vec)
+#     cos_performance[func.__name__] = func_performance.best
 
 # pd.Series(cos_performance).plot(kind='bar')
 
+print(torch.rand(2,3).cuda())
+c = torch.cuda.current_device()
+count = torch.cuda.device_count()
+available = torch.cuda.is_available()
+
+
+
+c = 2

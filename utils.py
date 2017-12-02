@@ -1,5 +1,8 @@
 import itertools
 
+class TaggingType(object):
+    POS = 0,
+    NER = 1
 
 def read_data_into_batches(fname):
     batches = []
@@ -24,9 +27,11 @@ def read_data_into_batches(fname):
 POS_TRAIN_Batches = read_data_into_batches("data/pos/train")
 POS_DEV_Batches    = read_data_into_batches("data/pos/dev")
 
+NER_TRAIN_Batches = read_data_into_batches("data/ner/train")
+NER_DEV_Batches    = read_data_into_batches("data/ner/dev")
 
-def get_unique_words():
-    all_tuples = list(itertools.chain.from_iterable(POS_TRAIN_Batches))
+def get_unique_words(tagging_type):
+    all_tuples = get_all_tuples(tagging_type)
     all_words = set([word[0] for word in all_tuples])
     all_words.add('Unknown123456')
     return  all_words
@@ -37,13 +42,16 @@ def get_unique_words():
 #     return unique_words
 
 
-def get_unique_labels():
-    all_tuples = list(itertools.chain.from_iterable(POS_TRAIN_Batches))
+def get_unique_labels(tagging_type):
+    all_tuples = get_all_tuples(tagging_type)
     labels = set([word[1] for word in all_tuples])
     labels.remove('None')
     return labels
 
-
+def get_all_tuples(tagging_type):
+    if tagging_type == TaggingType.POS:
+        return list(itertools.chain.from_iterable(POS_TRAIN_Batches))
+    return list(itertools.chain.from_iterable(NER_TRAIN_Batches))
 
 
 # check how to read this...
