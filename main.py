@@ -11,14 +11,15 @@ import torch.backends.cudnn as cudnn
 import datetime
 from utils import TaggingType
 
+# use_pretrained_embeddings = True
 
 EMBEDDING_DIM_SIZE = 50
 CONTEXT_SIZE = 5
 Epochs = 5
 # LEARNING_RATE = 0.001
-# LEARNING_RATE = 0.01
-LEARNING_RATE = 0.02
-HIDDEN_LAYER_SIZE = 100
+LEARNING_RATE = 0.01
+# LEARNING_RATE = 0.02
+HIDDEN_LAYER_SIZE = 200
 START_INDEX = 2
 tagging = TaggingType.NER
 
@@ -43,21 +44,23 @@ def get_context_indexes(batch, i):
     indexes = []
     j = i - 2
     while j <= i + 2:
-        # indexes.append(word_to_ix[batch[j][0]])
-        indexes.append(word_to_ix[batch[j][0]])
-        j += 1
-    return indexes
-
-def get_dev_context_indexes(batch, i):
-    indexes = []
-    j = i - 2
-    while j <= i + 2:
         if batch[j][0] in word_to_ix:
             indexes.append(word_to_ix[batch[j][0]])
         else:
-            indexes.append(word_to_ix['Unknown123456'])
+            indexes.append(word_to_ix[utils.unknown_word])
         j += 1
     return indexes
+#
+# def get_dev_context_indexes(batch, i):
+#     indexes = []
+#     j = i - 2
+#     while j <= i + 2:
+#         if batch[j][0] in word_to_ix:
+#             indexes.append(word_to_ix[batch[j][0]])
+#         else:
+#             indexes.append(word_to_ix[unknown_word])
+#         j += 1
+#     return indexes
 
 def get_label_vec(label):
     y = np.zeros(label_dim)
@@ -77,7 +80,7 @@ def execute_test(tagging_type):
         test_lose = torch.FloatTensor([0]).cuda()
         i = START_INDEX
         while i <= end_index:
-            context_idxs = get_dev_context_indexes(batch, i)
+            context_idxs = get_context_indexes(batch, i)
             context_var = autograd.Variable(torch.LongTensor(context_idxs).cuda())
             log_probs = model(context_var)
             test_lose += loss_function(log_probs,
@@ -103,14 +106,17 @@ def execute_test(tagging_type):
 
 
 if __name__ == '__main__':
-    vocab, labels = utils.get_unique_words(tagging), utils.get_unique_labels(tagging)
+    if utils.use_pretrained_embeddings:
+        vocab = utils.pretrained_vocab
+    else:
+        vocab = utils.get_unique_words(tagging)
+    labels = utils.get_unique_labels(tagging)
     train_batches = utils.POS_TRAIN_Batches if tagging == TaggingType.POS else utils.NER_TRAIN_Batches
     word_to_ix = {word: i for i, word in enumerate(vocab)}
     label_to_ix = {label: i for i, label in enumerate(labels)}
     ix_to_label = {v: k for k, v in label_to_ix.iteritems()}
     label_dim = len(labels)
-    # +1 for unknown words
-    model = tagger1.SequenceTagger(len(vocab), EMBEDDING_DIM_SIZE, CONTEXT_SIZE, HIDDEN_LAYER_SIZE, label_dim)
+    model = tagger1.SequenceTagger(len(vocab), EMBEDDING_DIM_SIZE, CONTEXT_SIZE, HIDDEN_LAYER_SIZE, label_dim, utils.use_pretrained_embeddings)
     model.cuda()
 
     dev_batches = utils.POS_DEV_Batches if tagging == TaggingType.POS else utils.NER_DEV_Batches
@@ -142,7 +148,7 @@ if __name__ == '__main__':
 
         for index, batch in enumerate(train_batches):
             if index % 100 == 0:
-                print 'batch ' + str(index) + '/' + total_bathces
+                print 'epoch ' + str(epoch + 1) + ' batch ' + str(index) + '/' + total_bathces
             end_index = len(batch) - 3
             model.zero_grad()
 

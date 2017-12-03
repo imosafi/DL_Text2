@@ -8,10 +8,12 @@ import utils
 
 
 class SequenceTagger(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, context_size, hidden_layer_size, output_dim):
+    def __init__(self, vocab_size, embedding_dim, context_size, hidden_layer_size, output_dim, load_pretrained_embeddings = False):
         super(SequenceTagger, self).__init__()
         self.output_dim = output_dim
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        if load_pretrained_embeddings:
+            self.embeddings.weight.data.copy_(torch.from_numpy(utils.word_vectors))
         # self.linear1 = nn.Linear((two_way_context_size * 2 + 1) * embedding_dim, 200)
         self.linear1 = nn.Linear(context_size * embedding_dim, hidden_layer_size)
         self.linear2 = nn.Linear(hidden_layer_size, output_dim)

@@ -1,20 +1,22 @@
 import numpy as np
 import scipy.spatial
+import utils
 
 output_path = 'data/k_closest.txt'
 K = 5
 
 words_to_search = ['dog', 'england', 'john', 'explode', 'office']
 
-vecs = np.loadtxt('data/wordVectors.txt')
-with open('data/vocab.txt') as f:
-    vocab = [line.rstrip() for line in f]
+
 
 # words_to_search = ['cat', 'car']
 #
 # vecs = np.loadtxt('data/dummyWordVectors.txt')
 # with open('data/dummyVocab.txt') as f:
 #     vocab = [line.rstrip() for line in f]
+
+vecs = utils.word_vectors
+vocab = utils.pretrained_vocab
 
 word_to_vec_dict = dict(zip(vocab, vecs))
 vec_to_word_dict = {tuple(v): k for k, v in word_to_vec_dict.iteritems()}
