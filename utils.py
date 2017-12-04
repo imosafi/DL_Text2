@@ -6,7 +6,7 @@ class TaggingType(object):
     NER = 1
 
 use_subword_sum = True
-use_pretrained_embeddings = True
+use_pretrained_embeddings = False
 pretrained_unknown_word = 'UUUNKKK'
 bos = 'bos' if use_pretrained_embeddings else 'BOS'
 eos = 'eos' if use_pretrained_embeddings else 'EOS'
@@ -45,6 +45,7 @@ word_vectors = np.loadtxt('data/wordVectors.txt')
 with open('data/vocab.txt') as f:
     pretrained_vocab = [line.rstrip() for line in f]
 
+dummy_word_vectors = np.loadtxt('data/dummyWordVectors.txt')
 
 def get_unique_words(tagging_type):
     all_tuples = get_all_tuples(tagging_type)
@@ -69,6 +70,15 @@ def get_all_tuples(tagging_type):
         return list(itertools.chain.from_iterable(POS_TRAIN_Batches))
     return list(itertools.chain.from_iterable(NER_TRAIN_Batches))
 
+def get_suffix_prefix_vocab(words):
+    complete_vocab = []
+    for word in words:
+        complete_vocab.append(word)
+        if len(word) > 3:
+            complete_vocab.append(word[:3])
+            complete_vocab.append(word[-3:])
+    complete_vocab = set(complete_vocab)
+    return complete_vocab
 
 # check how to read this...
 # TEST  = [read_data("data/" + str(info_type) + "/test")]
