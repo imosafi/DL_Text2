@@ -22,13 +22,15 @@ START_INDEX = 2
 tagging = TaggingType.POS
 
 
-def ensure_directory_exists(self, directory_path):
+def ensure_directory_exists(directory_path):
     if not os.path.exists(directory_path):
         os.makedirs(directory_path)
+
 
 def save_results(save_path, losses, accuracies):
     ensure_directory_exists(save_path)
     f = open(save_path + '/results.text', 'w')
+    f.write('tagging type: ' + str(tagging) + '\n')
     f.write('hidden layer size: ' + str(HIDDEN_LAYER_SIZE) + '\n')
     f.write('number of epochs: ' + str(Epochs) + '\n')
     f.write('learning rate: ' + str(LEARNING_RATE) + '\n')
@@ -42,8 +44,24 @@ def save_results(save_path, losses, accuracies):
     plt.title('Net Accuracy')
     plt.ylabel('Accuracy')
     plt.xlabel('Epochs')
-    plt.plot(losses, color='tab:blue')
+    plt.plot(accuracies, color='tab:blue')
     plt.savefig(save_path + '/plot_accuracy.png', dpi=100)
+    with open(save_path + '/pred', 'w') as f:
+        f.writelines(predict_testset())
+
+def predict_testset():
+    results = []
+    for index, batch in enumerate(dev_batches):
+        end_index = len(batch) - 3
+        i = START_INDEX
+        while i <= end_index:
+            inputs, offsets = get_suffix_prefix_inputs_offsets(batch, i)
+            inputs = torch.autograd.Variable(torch.LongTensor(inputs).cuda())
+            offsets = torch.autograd.Variable(torch.LongTensor(offsets).cuda())
+            log_probs = model(inputs, offsets)
+            results.append(ix_to_label[log_probs.max(1)[1].data[0]] + '\n')
+            i += 1
+    return results
 
 def get_suffix_prefix_inputs_offsets(batch, i):
     inputs = []
@@ -72,6 +90,8 @@ def get_suffix_prefix_inputs_offsets(batch, i):
                 offsets.append(k)
         j += 1
     return inputs, offsets
+
+
 def get_context_indexes(batch, i):
     indexes = []
     j = i - 2
@@ -83,10 +103,12 @@ def get_context_indexes(batch, i):
         j += 1
     return indexes
 
+
 def get_label_vec(label):
     y = np.zeros(label_dim)
     y[label_to_ix[label]] = 1
     return y
+
 
 def execute_test(tagging_type):
     # test on dev
@@ -163,7 +185,7 @@ if __name__ == '__main__':
     cudnn.benchmark = True
     cudnn.fastest = True
 
-    now = datetime.now()
+    now = datetime.datetime.now()
     current_date = now.strftime("%d.%m.%Y")
     current_time = now.strftime("%H:%M:%S")
     for epoch in xrange(Epochs):
@@ -207,6 +229,8 @@ if __name__ == '__main__':
 
         losses.append(loss)
         accuracies.append(accuracy)
-    save_results('results/' + current_date + '_' + current_time, losses, accuracies)
+    losses_for_plot = [loss[0] for loss in losses]
+    accuracies_for_plot = [accuracy for accuracy in accuracies]
+    save_results('results/' + current_date + '_' + current_time, losses_for_plot, accuracies_for_plot)
     print(losses)
     print(accuracies)

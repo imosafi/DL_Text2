@@ -29,10 +29,19 @@ def read_data_into_batches(fname):
             current_batch.append((bos, 'None'))
             current_batch.append((bos, 'None'))
         else:
+            if not len(line.split()) > 1:
+                line = line + 'None'
+            # try:
             text, label = line.strip().split()
+            # except:
+            #     text = line.strip()
             if use_pretrained_embeddings:
                 text = text.lower()
+            # try:
             current_batch.append((text, label))
+            # except:
+            #     current_batch.append(text)
+
     return batches
 
 POS_TRAIN_Batches = read_data_into_batches("data/pos/train")
@@ -40,6 +49,9 @@ POS_DEV_Batches    = read_data_into_batches("data/pos/dev")
 
 NER_TRAIN_Batches = read_data_into_batches("data/ner/train")
 NER_DEV_Batches    = read_data_into_batches("data/ner/dev")
+
+POS_TEST_BATCHES = read_data_into_batches("data/pos/test")
+NER_TEST_BATCHES = read_data_into_batches("data/ner/test")
 
 word_vectors = np.loadtxt('data/wordVectors.txt')
 with open('data/vocab.txt') as f:
