@@ -6,8 +6,10 @@ class TaggingType(object):
     NER = 1
 
 use_subword_sum = True
-use_pretrained_embeddings = False
+use_pretrained_embeddings = True
 pretrained_unknown_word = 'UUUNKKK'
+pretrained_unknown_prefix = 'UUUNKKK_PREFIX'
+pretrained_unknown_suffix = 'UUUNKKK_SUFFIX'
 bos = 'bos' if use_pretrained_embeddings else 'BOS'
 eos = 'eos' if use_pretrained_embeddings else 'EOS'
 unknown_word = pretrained_unknown_word if use_pretrained_embeddings else 'Unknown123456'
@@ -82,7 +84,7 @@ def get_all_tuples(tagging_type):
         return list(itertools.chain.from_iterable(POS_TRAIN_Batches))
     return list(itertools.chain.from_iterable(NER_TRAIN_Batches))
 
-def get_suffix_prefix_vocab(words):
+def get_suffix_prefix_regular_vocab(words):
     complete_vocab = []
     for word in words:
         complete_vocab.append(word)
@@ -91,6 +93,23 @@ def get_suffix_prefix_vocab(words):
             complete_vocab.append(word[-3:])
     complete_vocab = set(complete_vocab)
     return complete_vocab
+
+# split into 2 and return the sizes as well for future assignment
+def get_suffix_prefix_pretrained_vocab_and_word_to_ix(pretrained_vocab, corpus_words):
+    pretrained_words = []
+    prefixes_suffixes = []
+    for word in pretrained_vocab:
+        pretrained_words.append(word)
+    for word in corpus_words:
+        if len(word) > 3:
+            prefixes_suffixes.append(word[:3])
+            prefixes_suffixes.append(word[-3:])
+    prefixes_suffixes = set(prefixes_suffixes)
+    prefixes_suffixes = [x for x in prefixes_suffixes if x not in pretrained_words]
+    complete_vocab = pretrained_words + prefixes_suffixes + [pretrained_unknown_prefix, pretrained_unknown_suffix]
+    word_to_ix = {word: i for i, word in enumerate(complete_vocab)}
+
+    return complete_vocab, word_to_ix
 
 # check how to read this...
 # TEST  = [read_data("data/" + str(info_type) + "/test")]

@@ -10,18 +10,19 @@ import random
 import torch.backends.cudnn as cudnn
 import datetime
 from utils import TaggingType
-
+import matplotlib.pyplot as plt
+import os
 # use_pretrained_embeddings = True
 
 EMBEDDING_DIM_SIZE = 50
 CONTEXT_SIZE = 5
-Epochs = 5
+Epochs = 15
 # LEARNING_RATE = 0.001
 LEARNING_RATE = 0.01
 # LEARNING_RATE = 0.02
-HIDDEN_LAYER_SIZE = 200
+HIDDEN_LAYER_SIZE = 50 # used to be 200
 START_INDEX = 2
-tagging = TaggingType.NER
+tagging = TaggingType.POS
 
 # def run_tagger1_training():
 #     word_to_ix = {"hello": 0, "world": 1}
@@ -39,6 +40,49 @@ tagging = TaggingType.NER
 #     y = [0] * label_dim
 #     y[vocab[word_to_ix[target]][1]] = 1
 #     return y
+
+def ensure_directory_exists(directory_path):
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
+
+def save_results(save_path, losses, accuracies):
+    ensure_directory_exists(save_path)
+    f = open(save_path + '/results.text', 'w')
+    f.write('tagging type: ' + str(tagging) + '\n')
+    f.write('hidden layer size: ' + str(HIDDEN_LAYER_SIZE) + '\n')
+    f.write('number of epochs: ' + str(Epochs) + '\n')
+    f.write('learning rate: ' + str(LEARNING_RATE) + '\n')
+    f.close()
+    plt.title('Net Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epochs')
+    plt.plot(losses, color='tab:red')
+    plt.savefig(save_path + '/plot_loss.png', dpi=100)
+    plt.cla()
+    plt.title('Net Accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epochs')
+    plt.plot(accuracies, color='tab:blue')
+    plt.savefig(save_path + '/plot_accuracy.png', dpi=100)
+    with open(save_path + '/pred', 'w') as f:
+        f.writelines(predict_testset())
+    torch.save(model, save_path + '/my_training.pt')
+
+
+def predict_testset():
+    results = []
+    for index, batch in enumerate(dev_batches):
+        end_index = len(batch) - 3
+        i = START_INDEX
+        while i <= end_index:
+            context_idxs = get_context_indexes(batch, i)
+            context_var = autograd.Variable(torch.LongTensor(context_idxs).cuda())
+            log_probs = model(context_var)
+            results.append(ix_to_label[log_probs.max(1)[1].data[0]] + '\n')
+            i += 1
+    return results
+
 
 def get_context_indexes(batch, i):
     indexes = []
@@ -61,6 +105,7 @@ def get_context_indexes(batch, i):
 #             indexes.append(word_to_ix[unknown_word])
 #         j += 1
 #     return indexes
+
 
 def get_label_vec(label):
     y = np.zeros(label_dim)
@@ -134,12 +179,15 @@ if __name__ == '__main__':
     losses = []
     accuracies = []
     loss_function = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    # optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     cudnn.benchmark = True
     cudnn.fastest = True
 
-
+    now = datetime.datetime.now()
+    current_date = now.strftime("%d.%m.%Y")
+    current_time = now.strftime("%H:%M:%S")
     for epoch in xrange(Epochs):
         print "start epoch " + str(epoch + 1)
         total_bathces = str(len(train_batches))
@@ -160,11 +208,7 @@ if __name__ == '__main__':
                 context_var = autograd.Variable(torch.LongTensor(context_idxs).cuda())
                 log_probs = model(context_var)
                 loss += loss_function(log_probs, autograd.Variable(torch.LongTensor([label_to_ix[batch[i][1]]]).cuda()))
-                # context_idxs.append(get_context_indexes(batch, i))
                 i += 1
-
-            # context_var = context_var.view(len(batch) - 4, 5)
-            # y = get_label_vec(batch[i][1])
 
             loss /= (len(batch) - 4)
             loss.backward()
@@ -175,5 +219,8 @@ if __name__ == '__main__':
 
         losses.append(loss)
         accuracies.append(accuracy)
+    losses_for_plot = [loss[0] for loss in losses]
+    accuracies_for_plot = [accuracy for accuracy in accuracies]
+    save_results('results/' + current_date + '_' + current_time, losses_for_plot, accuracies_for_plot)
     print(losses)
     print(accuracies)

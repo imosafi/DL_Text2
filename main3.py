@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 EMBEDDING_DIM_SIZE = 50
 CONTEXT_SIZE = 5
-Epochs = 1
+Epochs = 2
 LEARNING_RATE = 0.01
 HIDDEN_LAYER_SIZE = 200
 START_INDEX = 2
@@ -48,6 +48,8 @@ def save_results(save_path, losses, accuracies):
     plt.savefig(save_path + '/plot_accuracy.png', dpi=100)
     with open(save_path + '/pred', 'w') as f:
         f.writelines(predict_testset())
+    torch.save(model, save_path + '/my_training.pt')
+
 
 def predict_testset():
     results = []
@@ -55,7 +57,7 @@ def predict_testset():
         end_index = len(batch) - 3
         i = START_INDEX
         while i <= end_index:
-            inputs, offsets = get_suffix_prefix_inputs_offsets(batch, i)
+            inputs, offsets = get_suffix_prefix_inputs_offsets_regular(batch, i)
             inputs = torch.autograd.Variable(torch.LongTensor(inputs).cuda())
             offsets = torch.autograd.Variable(torch.LongTensor(offsets).cuda())
             log_probs = model(inputs, offsets)
@@ -63,7 +65,46 @@ def predict_testset():
             i += 1
     return results
 
-def get_suffix_prefix_inputs_offsets(batch, i):
+
+def get_suffix_prefix_inputs_offsets_pretrained(batch, i):
+    return None
+
+def set_embedding_with_pretrained():
+    i = 0
+    while i < len(utils.pretrained_vocab):
+        model.embedding_sum.weight.data[i] = torch.FloatTensor(utils.word_vectors[i])
+        i += 1
+
+# def get_suffix_prefix_inputs_offsets_regular(batch, i):
+#     inputs = []
+#     offsets = []
+#     k = 0
+#     j = i - 2
+#     offsets.append(k)
+#     while j <= i + 2:
+#         current_word = batch[j][0]
+#         if current_word in word_to_ix and len(current_word) <= 3:
+#             inputs.append(word_to_ix[current_word])
+#             k += 1
+#             if j < i + 2:
+#                 offsets.append(k)
+#         elif current_word in word_to_ix and len(current_word) > 3:
+#             inputs.append(word_to_ix[current_word])
+#             inputs.append(word_to_ix[current_word[:3]])
+#             inputs.append(word_to_ix[current_word[-3:]])
+#             k += 3
+#             if j < i + 2:
+#                 offsets.append(k)
+#         else:
+#             inputs.append(word_to_ix[utils.unknown_word])
+#             k += 1
+#             if j < i + 2:
+#                 offsets.append(k)
+#         j += 1
+#     return inputs, offsets
+
+
+def get_suffix_prefix_inputs_offsets_regular(batch, i):
     inputs = []
     offsets = []
     k = 0
@@ -73,24 +114,27 @@ def get_suffix_prefix_inputs_offsets(batch, i):
         current_word = batch[j][0]
         if current_word in word_to_ix and len(current_word) <= 3:
             inputs.append(word_to_ix[current_word])
-            k += 1
+            inputs.append(word_to_ix[current_word])
+            inputs.append(word_to_ix[current_word])
+            k += 3
             if j < i + 2:
                 offsets.append(k)
         elif current_word in word_to_ix and len(current_word) > 3:
             inputs.append(word_to_ix[current_word])
-            inputs.append(word_to_ix[current_word[:3]])
-            inputs.append(word_to_ix[current_word[-3:]])
+            inputs.append(word_to_ix[current_word[:3]] if current_word[:3] in word_to_ix else word_to_ix[utils.pretrained_unknown_prefix])
+            inputs.append(word_to_ix[current_word[-3:]] if current_word[-3:] in word_to_ix else word_to_ix[utils.pretrained_unknown_suffix])
             k += 3
             if j < i + 2:
                 offsets.append(k)
         else:
             inputs.append(word_to_ix[utils.unknown_word])
-            k += 1
+            inputs.append(word_to_ix[utils.unknown_word])
+            inputs.append(word_to_ix[utils.unknown_word])
+            k += 3
             if j < i + 2:
                 offsets.append(k)
         j += 1
     return inputs, offsets
-
 
 def get_context_indexes(batch, i):
     indexes = []
@@ -111,9 +155,7 @@ def get_label_vec(label):
 
 
 def execute_test(tagging_type):
-    # test on dev
     total_loss = torch.FloatTensor([0]).cuda()
-    # test_lose = torch.FloatTensor([0])
     total_tries = 0
     correct_preds = 0
     correct = 0
@@ -123,9 +165,7 @@ def execute_test(tagging_type):
         test_lose = torch.FloatTensor([0]).cuda()
         i = START_INDEX
         while i <= end_index:
-            # context_idxs = get_context_indexes(batch, i)
-            # context_var = autograd.Variable(torch.LongTensor(context_idxs).cuda())
-            inputs, offsets = get_suffix_prefix_inputs_offsets(batch, i)
+            inputs, offsets = get_suffix_prefix_inputs_offsets_regular(batch, i)
             inputs = torch.autograd.Variable(torch.LongTensor(inputs).cuda())
             offsets = torch.autograd.Variable(torch.LongTensor(offsets).cuda())
             log_probs = model(inputs, offsets)
@@ -153,30 +193,21 @@ def execute_test(tagging_type):
 
 if __name__ == '__main__':
     if utils.use_pretrained_embeddings:
-        vocab = utils.pretrained_vocab
+        vocab, word_to_ix = utils.get_suffix_prefix_pretrained_vocab_and_word_to_ix(utils.pretrained_vocab, utils.get_unique_words(tagging))
     else:
-        vocab = utils.get_suffix_prefix_vocab(utils.get_unique_words(tagging))
+        vocab = utils.get_suffix_prefix_regular_vocab(utils.get_unique_words(tagging))
+        word_to_ix = {word: i for i, word in enumerate(vocab)}
     labels = utils.get_unique_labels(tagging)
     train_batches = utils.POS_TRAIN_Batches if tagging == TaggingType.POS else utils.NER_TRAIN_Batches
-    word_to_ix = {word: i for i, word in enumerate(vocab)}
     label_to_ix = {label: i for i, label in enumerate(labels)}
     ix_to_label = {v: k for k, v in label_to_ix.iteritems()}
     label_dim = len(labels)
     model = tagger3.SequenceTagger(len(vocab), EMBEDDING_DIM_SIZE, CONTEXT_SIZE, HIDDEN_LAYER_SIZE, label_dim, utils.use_pretrained_embeddings)
+    if utils.use_pretrained_embeddings:
+        set_embedding_with_pretrained()
     model.cuda()
 
     dev_batches = utils.POS_DEV_Batches if tagging == TaggingType.POS else utils.NER_DEV_Batches
-
-    # pos_batches = read_into_barches('')
-    # run_tagger1_training()
-    # training_words = [word[0] for word in utils.POS_TRAIN[0]]
-    # trigrams = prepare_data_for_training(utils.POS_TRAIN)
-    # vocab = utils.get_unique_words_vocab(utils.POS_TRAIN)
-    # word_to_ix = {word: i for i, word in enumerate(vocab)}
-    # labels = utils.get_label_vector_size(utils.POS_TRAIN)
-    # label_to_ix = {word: i for i, word in enumerate(labels)}
-    # label_dim = len(labels)
-    # word_to_ix = {word: i for i, word in enumerate(vocab)}
     losses = []
     accuracies = []
     loss_function = nn.CrossEntropyLoss()
@@ -199,26 +230,19 @@ if __name__ == '__main__':
                 print 'epoch ' + str(epoch + 1) + ' batch ' + str(index) + '/' + total_bathces
             end_index = len(batch) - 3
             model.zero_grad()
-
             loss = 0
             i = START_INDEX
 
             while i <= end_index:
-                inputs, offsets = get_suffix_prefix_inputs_offsets(batch, i)
+                # if utils.use_pretrained_embeddings:
+                #     inputs, offsets = get_suffix_prefix_inputs_offsets_pretrained(batch, i)
+                # else:
+                inputs, offsets = get_suffix_prefix_inputs_offsets_regular(batch, i)
                 inputs = torch.autograd.Variable(torch.LongTensor(inputs).cuda())
                 offsets = torch.autograd.Variable(torch.LongTensor(offsets).cuda())
-                # embedding_sum = nn.EmbeddingBag(len(vocab), 50, mode='sum')
-                # a batch of 2 samples of 4 indices each
-                # w = embedding_sum(inputs, offsets)
-                # context_idxs = get_context_indexes(batch, i)
-                # context_var = autograd.Variable(torch.LongTensor(context_idxs).cuda())
                 log_probs = model(inputs, offsets)
                 loss += loss_function(log_probs, autograd.Variable(torch.LongTensor([label_to_ix[batch[i][1]]]).cuda()))
-                # context_idxs.append(get_context_indexes(batch, i))
                 i += 1
-
-            # context_var = context_var.view(len(batch) - 4, 5)
-            # y = get_label_vec(batch[i][1])
 
             loss /= (len(batch) - 4)
             loss.backward()
