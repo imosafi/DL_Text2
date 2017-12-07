@@ -219,6 +219,7 @@ if __name__ == '__main__':
 
         losses.append(loss)
         accuracies.append(accuracy)
+        print 'loss ' + str(loss) + ', accuracy ' + str(accuracy)
     losses_for_plot = [loss[0] for loss in losses]
     accuracies_for_plot = [accuracy for accuracy in accuracies]
     save_results('results/' + current_date + '_' + current_time, losses_for_plot, accuracies_for_plot)
