@@ -16,9 +16,9 @@ import os
 
 EMBEDDING_DIM_SIZE = 50
 CONTEXT_SIZE = 5
-Epochs = 15
+Epochs = 10
 # LEARNING_RATE = 0.001
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.001
 # LEARNING_RATE = 0.02
 HIDDEN_LAYER_SIZE = 50 # used to be 200
 START_INDEX = 2
@@ -72,14 +72,14 @@ def save_results(save_path, losses, accuracies):
 
 def predict_testset():
     results = []
-    for index, batch in enumerate(dev_batches):
+    for index, batch in enumerate(test_batches):
         end_index = len(batch) - 3
         i = START_INDEX
         while i <= end_index:
             context_idxs = get_context_indexes(batch, i)
             context_var = autograd.Variable(torch.LongTensor(context_idxs).cuda())
             log_probs = model(context_var)
-            results.append(ix_to_label[log_probs.max(1)[1].data[0]] + '\n')
+            results.append(str(batch[i][0]) + ' ' + ix_to_label[log_probs.max(1)[1].data[0]] + '\n')
             i += 1
     return results
 
@@ -165,6 +165,7 @@ if __name__ == '__main__':
     model.cuda()
 
     dev_batches = utils.POS_DEV_Batches if tagging == TaggingType.POS else utils.NER_DEV_Batches
+    test_batches = utils.POS_TEST_BATCHES if tagging == TaggingType.POS else utils.NER_TEST_BATCHES
 
     # pos_batches = read_into_barches('')
     # run_tagger1_training()
@@ -189,6 +190,7 @@ if __name__ == '__main__':
     current_date = now.strftime("%d.%m.%Y")
     current_time = now.strftime("%H:%M:%S")
     for epoch in xrange(Epochs):
+        model.train()
         print "start epoch " + str(epoch + 1)
         total_bathces = str(len(train_batches))
         random.shuffle(train_batches)
@@ -215,6 +217,7 @@ if __name__ == '__main__':
             optimizer.step()
         print 'epoch took: ' + str(datetime.datetime.now() - pretrain_time)
 
+        model.eval()
         loss, accuracy = execute_test(tagging)
 
         losses.append(loss)

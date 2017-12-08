@@ -10,6 +10,7 @@ import utils
 class SequenceTagger(nn.Module):
     def __init__(self, vocab_size, embedding_dim, context_size, hidden_layer_size, output_dim, load_pretrained_embeddings = False):
         super(SequenceTagger, self).__init__()
+        self.drop_out = nn.Dropout(0.5)
         self.output_dim = output_dim
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
         if load_pretrained_embeddings:
@@ -21,5 +22,6 @@ class SequenceTagger(nn.Module):
     def forward(self, inputs):
         embeds = self.embeddings(inputs).view((1, -1))
         out = F.tanh(self.linear1(embeds))
+        out = F.dropout(out, training=self.training)
         out = self.linear2(out)
         return F.log_softmax(out)

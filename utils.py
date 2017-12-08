@@ -6,7 +6,7 @@ class TaggingType(object):
     NER = 1
 
 use_subword_sum = True
-use_pretrained_embeddings = True
+use_pretrained_embeddings = False
 pretrained_unknown_word = 'UUUNKKK'
 pretrained_unknown_prefix = 'UUUNKKK_PREFIX'
 pretrained_unknown_suffix = 'UUUNKKK_SUFFIX'

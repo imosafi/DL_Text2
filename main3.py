@@ -53,7 +53,7 @@ def save_results(save_path, losses, accuracies):
 
 def predict_testset():
     results = []
-    for index, batch in enumerate(dev_batches):
+    for index, batch in enumerate(test_batches):
         end_index = len(batch) - 3
         i = START_INDEX
         while i <= end_index:
@@ -61,7 +61,7 @@ def predict_testset():
             inputs = torch.autograd.Variable(torch.LongTensor(inputs).cuda())
             offsets = torch.autograd.Variable(torch.LongTensor(offsets).cuda())
             log_probs = model(inputs, offsets)
-            results.append(ix_to_label[log_probs.max(1)[1].data[0]] + '\n')
+            results.append(str(batch[i][0]) + ' ' + ix_to_label[log_probs.max(1)[1].data[0]] + '\n')
             i += 1
     return results
 
@@ -208,6 +208,7 @@ if __name__ == '__main__':
     model.cuda()
 
     dev_batches = utils.POS_DEV_Batches if tagging == TaggingType.POS else utils.NER_DEV_Batches
+    test_batches = utils.POS_TEST_BATCHES if tagging == TaggingType.POS else utils.NER_TEST_BATCHES
     losses = []
     accuracies = []
     loss_function = nn.CrossEntropyLoss()
@@ -220,6 +221,7 @@ if __name__ == '__main__':
     current_date = now.strftime("%d.%m.%Y")
     current_time = now.strftime("%H:%M:%S")
     for epoch in xrange(Epochs):
+        model.train()
         print "start epoch " + str(epoch + 1)
         total_bathces = str(len(train_batches))
         random.shuffle(train_batches)
@@ -249,6 +251,7 @@ if __name__ == '__main__':
             optimizer.step()
         print 'epoch took: ' + str(datetime.datetime.now() - pretrain_time)
 
+        model.eval()
         loss, accuracy = execute_test(tagging)
 
         losses.append(loss)
