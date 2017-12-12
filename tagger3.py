@@ -13,10 +13,6 @@ class SequenceTagger(nn.Module):
         self.output_dim = output_dim
         self.drop_out = nn.Dropout(0.5)
         self.embedding_sum = nn.EmbeddingBag(vocab_size, embedding_dim, mode='sum')
-        # self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        # if load_pretrained_embeddings:
-        #     self.embeddings.weight.data.copy_(torch.from_numpy(utils.word_vectors))
-        # self.linear1 = nn.Linear((two_way_context_size * 2 + 1) * embedding_dim, 200)
         self.linear1 = nn.Linear(context_size * embedding_dim, hidden_layer_size)
         self.linear2 = nn.Linear(hidden_layer_size, output_dim)
 

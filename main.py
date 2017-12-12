@@ -12,34 +12,14 @@ import datetime
 from utils import TaggingType
 import matplotlib.pyplot as plt
 import os
-# use_pretrained_embeddings = True
 
 EMBEDDING_DIM_SIZE = 50
 CONTEXT_SIZE = 5
 Epochs = 10
-# LEARNING_RATE = 0.001
 LEARNING_RATE = 0.001
-# LEARNING_RATE = 0.02
-HIDDEN_LAYER_SIZE = 50 # used to be 200
+HIDDEN_LAYER_SIZE = 50
 START_INDEX = 2
-tagging = TaggingType.POS
-
-# def run_tagger1_training():
-#     word_to_ix = {"hello": 0, "world": 1}
-#     embeds = nn.Embedding(2, 5)  # 2 words in vocab, 5 dimensional embeddings
-#     lookup_tensor = torch.LongTensor([word_to_ix["hello"]])
-#     hello_embed = embeds(autograd.Variable(lookup_tensor))
-#     print(hello_embed)
-#
-#     x = 8
-#
-# def prepare_data_for_training(training_words):
-#     return [([training_words[0][i][0], training_words[0][i + 1][0]], training_words[0][i + 2][1]) for i in range(len(training_words[0]) - 2)]
-#
-# def get_one_hot_label(vocab, word, label_dim):
-#     y = [0] * label_dim
-#     y[vocab[word_to_ix[target]][1]] = 1
-#     return y
+tagging = TaggingType.NER
 
 def ensure_directory_exists(directory_path):
     if not os.path.exists(directory_path):
@@ -71,6 +51,7 @@ def save_results(save_path, losses, accuracies):
 
 
 def predict_testset():
+    model.eval()
     results = []
     for index, batch in enumerate(test_batches):
         end_index = len(batch) - 3
@@ -94,17 +75,6 @@ def get_context_indexes(batch, i):
             indexes.append(word_to_ix[utils.unknown_word])
         j += 1
     return indexes
-#
-# def get_dev_context_indexes(batch, i):
-#     indexes = []
-#     j = i - 2
-#     while j <= i + 2:
-#         if batch[j][0] in word_to_ix:
-#             indexes.append(word_to_ix[batch[j][0]])
-#         else:
-#             indexes.append(word_to_ix[unknown_word])
-#         j += 1
-#     return indexes
 
 
 def get_label_vec(label):
@@ -113,12 +83,9 @@ def get_label_vec(label):
     return y
 
 def execute_test(tagging_type):
-    # test on dev
     total_loss = torch.FloatTensor([0]).cuda()
-    # test_lose = torch.FloatTensor([0])
     total_tries = 0
     correct_preds = 0
-    correct = 0
     total_bathces = str(len(dev_batches))
     for index, batch in enumerate(dev_batches):
         end_index = len(batch) - 3
@@ -146,7 +113,7 @@ def execute_test(tagging_type):
         test_lose /= (len(batch) - 4)
         total_loss += test_lose
         if index % 100 == 0:
-            print 'batch ' + str(index) + '/' + total_bathces  # ', current loss ' + str(test_lose)
+            print 'batch ' + str(index) + '/' + total_bathces
     return total_loss / len(dev_batches), float(correct_preds) / total_tries
 
 
@@ -167,24 +134,12 @@ if __name__ == '__main__':
     dev_batches = utils.POS_DEV_Batches if tagging == TaggingType.POS else utils.NER_DEV_Batches
     test_batches = utils.POS_TEST_BATCHES if tagging == TaggingType.POS else utils.NER_TEST_BATCHES
 
-    # pos_batches = read_into_barches('')
-    # run_tagger1_training()
-    # training_words = [word[0] for word in utils.POS_TRAIN[0]]
-    # trigrams = prepare_data_for_training(utils.POS_TRAIN)
-    # vocab = utils.get_unique_words_vocab(utils.POS_TRAIN)
-    # word_to_ix = {word: i for i, word in enumerate(vocab)}
-    # labels = utils.get_label_vector_size(utils.POS_TRAIN)
-    # label_to_ix = {word: i for i, word in enumerate(labels)}
-    # label_dim = len(labels)
-    # word_to_ix = {word: i for i, word in enumerate(vocab)}
     losses = []
     accuracies = []
     loss_function = nn.CrossEntropyLoss()
-    # optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     cudnn.benchmark = True
-    cudnn.fastest = True
 
     now = datetime.datetime.now()
     current_date = now.strftime("%d.%m.%Y")

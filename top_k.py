@@ -8,13 +8,6 @@ K = 5
 words_to_search = ['dog', 'england', 'john', 'explode', 'office']
 
 
-
-# words_to_search = ['cat', 'car']
-#
-# vecs = np.loadtxt('data/dummyWordVectors.txt')
-# with open('data/dummyVocab.txt') as f:
-#     vocab = [line.rstrip() for line in f]
-
 vecs = utils.word_vectors
 vocab = utils.pretrained_vocab
 

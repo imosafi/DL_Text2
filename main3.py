@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 
 EMBEDDING_DIM_SIZE = 50
 CONTEXT_SIZE = 5
-Epochs = 2
-LEARNING_RATE = 0.01
-HIDDEN_LAYER_SIZE = 200
+Epochs = 7
+LEARNING_RATE = 0.001
+HIDDEN_LAYER_SIZE = 50
 START_INDEX = 2
-tagging = TaggingType.POS
+tagging = TaggingType.NER
 
 
 def ensure_directory_exists(directory_path):
@@ -52,6 +52,7 @@ def save_results(save_path, losses, accuracies):
 
 
 def predict_testset():
+    model.eval()
     results = []
     for index, batch in enumerate(test_batches):
         end_index = len(batch) - 3
@@ -66,42 +67,12 @@ def predict_testset():
     return results
 
 
-def get_suffix_prefix_inputs_offsets_pretrained(batch, i):
-    return None
-
 def set_embedding_with_pretrained():
     i = 0
     while i < len(utils.pretrained_vocab):
         model.embedding_sum.weight.data[i] = torch.FloatTensor(utils.word_vectors[i])
         i += 1
 
-# def get_suffix_prefix_inputs_offsets_regular(batch, i):
-#     inputs = []
-#     offsets = []
-#     k = 0
-#     j = i - 2
-#     offsets.append(k)
-#     while j <= i + 2:
-#         current_word = batch[j][0]
-#         if current_word in word_to_ix and len(current_word) <= 3:
-#             inputs.append(word_to_ix[current_word])
-#             k += 1
-#             if j < i + 2:
-#                 offsets.append(k)
-#         elif current_word in word_to_ix and len(current_word) > 3:
-#             inputs.append(word_to_ix[current_word])
-#             inputs.append(word_to_ix[current_word[:3]])
-#             inputs.append(word_to_ix[current_word[-3:]])
-#             k += 3
-#             if j < i + 2:
-#                 offsets.append(k)
-#         else:
-#             inputs.append(word_to_ix[utils.unknown_word])
-#             k += 1
-#             if j < i + 2:
-#                 offsets.append(k)
-#         j += 1
-#     return inputs, offsets
 
 
 def get_suffix_prefix_inputs_offsets_regular(batch, i):
@@ -136,29 +107,11 @@ def get_suffix_prefix_inputs_offsets_regular(batch, i):
         j += 1
     return inputs, offsets
 
-def get_context_indexes(batch, i):
-    indexes = []
-    j = i - 2
-    while j <= i + 2:
-        if batch[j][0] in word_to_ix:
-            indexes.append(word_to_ix[batch[j][0]])
-        else:
-            indexes.append(word_to_ix[utils.unknown_word])
-        j += 1
-    return indexes
-
-
-def get_label_vec(label):
-    y = np.zeros(label_dim)
-    y[label_to_ix[label]] = 1
-    return y
-
 
 def execute_test(tagging_type):
     total_loss = torch.FloatTensor([0]).cuda()
     total_tries = 0
     correct_preds = 0
-    correct = 0
     total_bathces = str(len(dev_batches))
     for index, batch in enumerate(dev_batches):
         end_index = len(batch) - 3
@@ -187,7 +140,7 @@ def execute_test(tagging_type):
         test_lose /= (len(batch) - 4)
         total_loss += test_lose
         if index % 100 == 0:
-            print 'batch ' + str(index) + '/' + total_bathces  # ', current loss ' + str(test_lose)
+            print 'batch ' + str(index) + '/' + total_bathces
     return total_loss / len(dev_batches), float(correct_preds) / total_tries
 
 
@@ -212,10 +165,9 @@ if __name__ == '__main__':
     losses = []
     accuracies = []
     loss_function = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     cudnn.benchmark = True
-    cudnn.fastest = True
 
     now = datetime.datetime.now()
     current_date = now.strftime("%d.%m.%Y")
@@ -236,9 +188,6 @@ if __name__ == '__main__':
             i = START_INDEX
 
             while i <= end_index:
-                # if utils.use_pretrained_embeddings:
-                #     inputs, offsets = get_suffix_prefix_inputs_offsets_pretrained(batch, i)
-                # else:
                 inputs, offsets = get_suffix_prefix_inputs_offsets_regular(batch, i)
                 inputs = torch.autograd.Variable(torch.LongTensor(inputs).cuda())
                 offsets = torch.autograd.Variable(torch.LongTensor(offsets).cuda())
@@ -256,6 +205,7 @@ if __name__ == '__main__':
 
         losses.append(loss)
         accuracies.append(accuracy)
+        print 'loss ' + str(loss) + ', accuracy ' + str(accuracy)
     losses_for_plot = [loss[0] for loss in losses]
     accuracies_for_plot = [accuracy for accuracy in accuracies]
     save_results('results/' + current_date + '_' + current_time, losses_for_plot, accuracies_for_plot)

@@ -5,8 +5,7 @@ class TaggingType(object):
     POS = 0,
     NER = 1
 
-use_subword_sum = True
-use_pretrained_embeddings = False
+use_pretrained_embeddings = True
 pretrained_unknown_word = 'UUUNKKK'
 pretrained_unknown_prefix = 'UUUNKKK_PREFIX'
 pretrained_unknown_suffix = 'UUUNKKK_SUFFIX'
@@ -33,16 +32,10 @@ def read_data_into_batches(fname):
         else:
             if not len(line.split()) > 1:
                 line = line + 'None'
-            # try:
             text, label = line.strip().split()
-            # except:
-            #     text = line.strip()
             if use_pretrained_embeddings:
                 text = text.lower()
-            # try:
             current_batch.append((text, label))
-            # except:
-            #     current_batch.append(text)
 
     return batches
 
@@ -67,11 +60,6 @@ def get_unique_words(tagging_type):
     all_words.add('Unknown123456')
     return all_words
 
-# def get_unique_words_vocab(words):
-#     words = words[0]
-#     unique_words = set([value[0] for value in words])
-#     return unique_words
-
 
 def get_unique_labels(tagging_type):
     all_tuples = get_all_tuples(tagging_type)
@@ -79,10 +67,12 @@ def get_unique_labels(tagging_type):
     labels.remove('None')
     return labels
 
+
 def get_all_tuples(tagging_type):
     if tagging_type == TaggingType.POS:
         return list(itertools.chain.from_iterable(POS_TRAIN_Batches))
     return list(itertools.chain.from_iterable(NER_TRAIN_Batches))
+
 
 def get_suffix_prefix_regular_vocab(words):
     complete_vocab = []
@@ -94,7 +84,7 @@ def get_suffix_prefix_regular_vocab(words):
     complete_vocab = set(complete_vocab)
     return complete_vocab
 
-# split into 2 and return the sizes as well for future assignment
+
 def get_suffix_prefix_pretrained_vocab_and_word_to_ix(pretrained_vocab, corpus_words):
     pretrained_words = []
     prefixes_suffixes = []
@@ -111,5 +101,3 @@ def get_suffix_prefix_pretrained_vocab_and_word_to_ix(pretrained_vocab, corpus_w
 
     return complete_vocab, word_to_ix
 
-# check how to read this...
-# TEST  = [read_data("data/" + str(info_type) + "/test")]
